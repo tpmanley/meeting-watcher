@@ -4,7 +4,32 @@ Menu bar app: pulls today's Google Calendar events, and if one has a
 Zoom or Knox Meeting link and is currently active but you're not already
 on the call, throws up a full-screen "join now" alert.
 
-## 1. Google Cloud setup (one-time, ~5 min)
+## Install
+
+```bash
+brew tap tpmanley/meeting-watcher https://github.com/tpmanley/meeting-watcher
+brew install --cask meeting-watcher
+```
+
+`brew upgrade` picks up new versions once the cask is bumped for a new
+release.
+
+This is the path for everyone except whoever maintains the Google Cloud
+OAuth client the app talks to (see [Distributing via
+Homebrew](HOMEBREW.md) for that side). You'll still need to be added as a
+test user on that person's OAuth consent screen — first launch → menu bar
+icon → **Connect Google Calendar** will otherwise fail with an "access
+blocked" error until you are. Testing-mode tokens also need re-consent
+roughly every 7 days; that's a Google restriction on unverified apps, not
+a bug here.
+
+## Building from source / local development
+
+The sections below are only needed if you're setting up your own Google
+Cloud OAuth client (e.g. you're the one distributing this to coworkers)
+or working on the code itself.
+
+### 1. Google Cloud setup (one-time, ~5 min)
 
 1. Go to https://console.cloud.google.com/ → create a new project (or
    reuse one).
@@ -22,7 +47,7 @@ on the call, throws up a full-screen "join now" alert.
    personal use, tokens just need re-consent every 7 days unless you
    publish the app, which isn't necessary here).
 
-## 2. Fill in `Secrets.xcconfig`
+### 2. Fill in `Secrets.xcconfig`
 
 Copy `Secrets.xcconfig.template` (next to the `.xcodeproj`) to
 `Secrets.xcconfig` and fill in your real client ID:
@@ -50,7 +75,7 @@ install the built binary (e.g. via the Homebrew cask, see `HOMEBREW.md`)
 never need their own Google Cloud project or client ID. They just need to
 be added as a test user on your OAuth consent screen.
 
-## 3. Build as a real macOS app (recommended over `swift run`)
+### 3. Build as a real macOS app (recommended over `swift run`)
 
 A menu-bar-only app (no Dock icon) and custom URL scheme handling both
 need an actual `Info.plist` inside an app bundle, which plain
@@ -74,14 +99,14 @@ need an actual `Info.plist` inside an app bundle, which plain
    camera). Click it → **Connect Google Calendar** → browser opens →
    consent → done.
 
-## 4. Grant permissions
+### 4. Grant permissions
 
 - First time the alert window tries to appear, macOS may prompt for
   screen-related permissions depending on your OS version — allow it.
 - No Accessibility or Screen Recording permission is needed for the
   `CptHost` process check (`pgrep` just reads the process list).
 
-## 5. Install to /Applications (optional)
+### 5. Install to /Applications (optional)
 
 Running from Xcode (⌘R) launches a copy out of DerivedData, which gets
 wiped/rebuilt on every run — fine for development, but not something

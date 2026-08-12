@@ -44,7 +44,7 @@ final class GoogleCalendarService: NSObject {
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: scope),
             URLQueryItem(name: "access_type", value: "offline"),
-            URLQueryItem(name: "prompt", value: "consent")
+            URLQueryItem(name: "prompt", value: "select_account consent")
         ]
 
         guard let scheme = URL(string: redirectURI)?.scheme else {

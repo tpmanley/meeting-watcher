@@ -72,7 +72,18 @@ final class GoogleCalendarService: NSObject {
             self.exchangeCodeForTokens(code: code, completion: completion)
         }
         session.presentationContextProvider = self
-        session.prefersEphemeralWebBrowserSession = false
+        // With this set to false, ASWebAuthenticationSession shares the
+        // persistent, system-wide web-credentials session — which already
+        // has an active Google login (e.g. a personal account signed in
+        // from browsing). Google then silently continues with that session
+        // instead of rendering the "select_account" chooser, so a second
+        // account (e.g. a work one) is never offered. Ephemeral forces a
+        // clean session with no prior Google login, so the chooser (or
+        // sign-in form) always appears and any account can be picked. The
+        // cost — re-entering credentials on every sign-in — is fine here
+        // since sign-in only happens once (or every ~7 days for
+        // re-consent); we're not relying on this session to persist.
+        session.prefersEphemeralWebBrowserSession = true
         self.webAuthSession = session
         session.start()
     }

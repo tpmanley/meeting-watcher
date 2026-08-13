@@ -39,6 +39,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return formatter
     }()
 
+    private static let appVersionString: String = {
+        let info = Bundle.main.infoDictionary
+        let shortVersion = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "Meeting Watcher \(shortVersion) (\(build))"
+    }()
+
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         rebuildMenu()
@@ -108,6 +115,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         launchAtLoginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: Self.appVersionString, action: nil, keyEquivalent: "").isEnabled = false
         statusItem.menu = menu
     }
 

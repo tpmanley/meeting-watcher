@@ -16,6 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastCalendarFetch: Date = .distantPast
     private var currentlyAlertingMeetingIDs: Set<String> = []
     private var dismissedMeetingIDs: Set<String> = []
+    private var lastRenderedPastMeetingIDs: Set<String> = []
     private var calendarErrorMessage: String?
     private var hasAlertedForCurrentCalendarError = false
 
@@ -79,7 +80,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else if todaysMeetings.isEmpty {
             menu.addItem(withTitle: "  None found", action: nil, keyEquivalent: "").isEnabled = false
         } else {
+            let now = Date()
             for meeting in todaysMeetings {
+                let hasEnded = meeting.end <= now
                 let start = Self.meetingTimeFormatter.string(from: meeting.start)
                 let end = Self.meetingTimeFormatter.string(from: meeting.end)
                 var title = "  \(start)–\(end)  \(meeting.title)"
@@ -89,11 +92,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     title += " (dismissed)"
                 } else if meeting.isDeclined {
                     title += " (declined)"
+                } else if hasEnded {
+                    title += " (ended)"
                 }
                 let item = menu.addItem(withTitle: title, action: #selector(openMeetingZoomLink(_:)), keyEquivalent: "")
                 item.representedObject = meeting.joinURL
                 item.target = self
-                if meeting.isDeclined {
+                if meeting.isDeclined || hasEnded {
                     let attributedTitle = NSMutableAttributedString(string: title)
                     attributedTitle.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue,
                                                   range: NSRange(location: 0, length: attributedTitle.length))
@@ -216,6 +221,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func evaluateState() {
         let now = Date()
+
+        // Cross out meetings in the menu as soon as their end time passes,
+        // rather than waiting for the next calendar re-fetch (up to 5
+        // minutes away) to happen to rebuild the menu for some other reason.
+        let pastMeetingIDs = Set(todaysMeetings.filter { $0.end <= now }.map(\.id))
+        if pastMeetingIDs != lastRenderedPastMeetingIDs {
+            lastRenderedPastMeetingIDs = pastMeetingIDs
+            rebuildMenu()
+        }
+
         let activeMeetings = todaysMeetings.filter { $0.isActive(at: now) && !$0.isDeclined }
         guard !activeMeetings.isEmpty else {
             logger.notice("evaluateState: no active meeting among \(self.todaysMeetings.count) cached (now=\(now))")

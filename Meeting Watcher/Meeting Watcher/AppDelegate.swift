@@ -40,10 +40,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }()
 
     private static let appVersionString: String = {
-        let info = Bundle.main.infoDictionary
-        let shortVersion = info?["CFBundleShortVersionString"] as? String ?? "?"
-        let build = info?["CFBundleVersion"] as? String ?? "?"
-        return "Meeting Watcher \(shortVersion) (\(build))"
+        let shortVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        return "Meeting Watcher \(shortVersion)"
     }()
 
     private func setupStatusItem() {

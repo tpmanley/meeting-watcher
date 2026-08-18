@@ -36,7 +36,10 @@ final class GoogleCalendarService: NSObject {
     /// Kicks off the browser-based consent flow. Call once, e.g. from a
     /// "Connect Google Calendar" menu item. Stores the refresh token in
     /// Keychain on success.
-    func signIn(completion: @escaping (Result<Void, Error>) -> Void) {
+    func signIn(completion rawCompletion: @escaping (Result<Void, Error>) -> Void) {
+        let completion: (Result<Void, Error>) -> Void = { result in
+            DispatchQueue.main.async { rawCompletion(result) }
+        }
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientID),
@@ -93,7 +96,10 @@ final class GoogleCalendarService: NSObject {
     }
 
     /// Returns any meetings today whose event body contains a zoom.us link.
-    func fetchTodaysZoomMeetings(completion: @escaping (Result<[CalendarMeeting], Error>) -> Void) {
+    func fetchTodaysZoomMeetings(completion rawCompletion: @escaping (Result<[CalendarMeeting], Error>) -> Void) {
+        let completion: (Result<[CalendarMeeting], Error>) -> Void = { result in
+            DispatchQueue.main.async { rawCompletion(result) }
+        }
         ensureValidAccessToken { [weak self] result in
             guard let self else { return }
             switch result {
@@ -135,7 +141,7 @@ final class GoogleCalendarService: NSObject {
             if let refreshToken = tokens.refresh_token {
                 KeychainHelper.saveRefreshToken(refreshToken)
             }
-            DispatchQueue.main.async { completion(.success(())) }
+            completion(.success(()))
         }.resume()
     }
 
@@ -273,7 +279,7 @@ final class GoogleCalendarService: NSObject {
                 )
             }
 
-            DispatchQueue.main.async { completion(.success(meetings)) }
+            completion(.success(meetings))
         }.resume()
     }
 

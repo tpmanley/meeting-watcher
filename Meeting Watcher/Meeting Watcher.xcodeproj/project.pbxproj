@@ -25,10 +25,15 @@
 
 /* Begin PBXFileReference section */
 		AABBCCDDEEFF001122334455 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		AABBCCDDEEFF001122334456 /* com.tommanley.Meeting-Watcher.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "com.tommanley.Meeting-Watcher.plist"; sourceTree = "<group>"; };
 		04159B1C301AA91C00A0397A /* Meeting Watcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Meeting Watcher.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		04159B29301AA91D00A0397A /* Meeting WatcherTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Meeting WatcherTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		04159B33301AA91D00A0397A /* Meeting WatcherUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Meeting WatcherUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXBuildFile section */
+		AABBCCDDEEFF001122334457 /* com.tommanley.Meeting-Watcher.plist in Embed LaunchAgent plist */ = {isa = PBXBuildFile; fileRef = AABBCCDDEEFF001122334456 /* com.tommanley.Meeting-Watcher.plist */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		04159B46301AA91D00A0397A /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
@@ -61,6 +66,20 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		AABBCCDDEEFF001122334458 /* Embed LaunchAgent plist */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "Contents/Library/LaunchAgents";
+			dstSubfolderSpec = 1;
+			files = (
+				AABBCCDDEEFF001122334457 /* com.tommanley.Meeting-Watcher.plist in Embed LaunchAgent plist */,
+			);
+			name = "Embed LaunchAgent plist";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		04159B19301AA91C00A0397A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -90,6 +109,7 @@
 			isa = PBXGroup;
 			children = (
 				AABBCCDDEEFF001122334455 /* Secrets.xcconfig */,
+				AABBCCDDEEFF001122334456 /* com.tommanley.Meeting-Watcher.plist */,
 				04159B1E301AA91C00A0397A /* Meeting Watcher */,
 				04159B2C301AA91D00A0397A /* Meeting WatcherTests */,
 				04159B36301AA91D00A0397A /* Meeting WatcherUITests */,
@@ -117,6 +137,7 @@
 				04159B18301AA91C00A0397A /* Sources */,
 				04159B19301AA91C00A0397A /* Frameworks */,
 				04159B1A301AA91C00A0397A /* Resources */,
+				AABBCCDDEEFF001122334458 /* Embed LaunchAgent plist */,
 			);
 			buildRules = (
 			);

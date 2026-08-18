@@ -1,6 +1,6 @@
 cask "meeting-watcher" do
-  version "1.4"
-  sha256 "c08823ad30a4af7df2a6da6f7fded01286fc94e28c72b83ecb718334c25cd7ed"
+  version "1.5"
+  sha256 "b386b8f2ecb008c31ed27fd7684572d1d7d93fd5b397d6da68c269c7fa05af35"
 
   # Update this to wherever the built zip actually lives — a GitHub Release
   # is the easiest option. Run scripts/build-release.sh to produce the zip

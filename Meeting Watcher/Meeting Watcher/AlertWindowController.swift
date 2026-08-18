@@ -2,15 +2,17 @@ import AppKit
 import SwiftUI
 
 /// Shows a full-screen, always-on-top overlay on every connected display
-/// when there's an active meeting you haven't joined. Dismissed by
-/// clicking "Join" (which also opens the Zoom link) or "Dismiss".
+/// when there's one or more active meetings you haven't joined. Dismissed by
+/// clicking "Join" on one of them (which also opens its join link) or
+/// "Dismiss All" — either way resolves the whole batch shown, not just the
+/// meeting that was clicked.
 final class AlertWindowController {
     private var windows: [NSWindow] = []
     private var pulseTimer: Timer?
 
-    func show(meeting: CalendarMeeting, onAcknowledged: @escaping () -> Void = {}) {
+    func show(meetings: [CalendarMeeting], onResolved: @escaping () -> Void = {}) {
         // Don't stack duplicate alerts if one's already up.
-        guard windows.isEmpty else { return }
+        guard windows.isEmpty, !meetings.isEmpty else { return }
 
         for screen in NSScreen.screens {
             let window = NSWindow(
@@ -27,14 +29,14 @@ final class AlertWindowController {
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
 
             let contentView = AlertContentView(
-                meeting: meeting,
-                onJoin: { [weak self] in
+                meetings: meetings,
+                onJoin: { [weak self] meeting in
                     NSWorkspace.shared.open(meeting.joinURL)
-                    onAcknowledged()
+                    onResolved()
                     self?.dismiss()
                 },
-                onDismiss: { [weak self] in
-                    onAcknowledged()
+                onDismissAll: { [weak self] in
+                    onResolved()
                     self?.dismiss()
                 }
             )

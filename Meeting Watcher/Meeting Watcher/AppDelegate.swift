@@ -14,7 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var todaysMeetings: [CalendarMeeting] = []
     private var lastCalendarFetch: Date = .distantPast
-    private var currentlyAlertingMeetingID: String?
+    private var currentlyAlertingMeetingIDs: Set<String> = []
     private var dismissedMeetingIDs: Set<String> = []
     private var calendarErrorMessage: String?
     private var hasAlertedForCurrentCalendarError = false
@@ -83,7 +83,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let start = Self.meetingTimeFormatter.string(from: meeting.start)
                 let end = Self.meetingTimeFormatter.string(from: meeting.end)
                 var title = "  \(start)–\(end)  \(meeting.title)"
-                if meeting.id == currentlyAlertingMeetingID {
+                if currentlyAlertingMeetingIDs.contains(meeting.id) {
                     title += " (alerting)"
                 } else if dismissedMeetingIDs.contains(meeting.id) {
                     title += " (dismissed)"
@@ -216,46 +216,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func evaluateState() {
         let now = Date()
-        guard let active = todaysMeetings.first(where: { $0.isActive(at: now) && !$0.isDeclined }) else {
+        let activeMeetings = todaysMeetings.filter { $0.isActive(at: now) && !$0.isDeclined }
+        guard !activeMeetings.isEmpty else {
             logger.notice("evaluateState: no active meeting among \(self.todaysMeetings.count) cached (now=\(now))")
-            let wasAlerting = currentlyAlertingMeetingID != nil
-            alertController.dismiss()
-            currentlyAlertingMeetingID = nil
-            if wasAlerting { rebuildMenu() }
+            dismissAlert()
             return
         }
 
-        if active.provider.canDetectJoinState {
-            let inMeeting = ZoomProcessMonitor.isInMeeting()
-            logger.notice("evaluateState: active meeting '\(active.title)', isInMeeting=\(inMeeting)")
-
-            if inMeeting {
-                // You're in a call — assume it's this one and stand down.
-                let wasAlerting = currentlyAlertingMeetingID != nil
-                alertController.dismiss()
-                currentlyAlertingMeetingID = nil
-                if wasAlerting { rebuildMenu() }
-                return
-            }
-        } else {
-            // No way to tell whether this provider's call is already
-            // joined (e.g. Knox Meeting) — always alert until dismissed.
-            logger.notice("evaluateState: active meeting '\(active.title)' has no join-state detection; alerting regardless")
+        // Can't tell *which* call you're in, just that some Zoom call is
+        // active — so being in a call stands down every concurrent Zoom
+        // meeting, but not a concurrent meeting from a provider with no
+        // join-state detection (e.g. Knox Meeting), which always alerts
+        // until dismissed.
+        let inZoomCall = ZoomProcessMonitor.isInMeeting()
+        let toAlert = activeMeetings.filter { meeting in
+            guard !dismissedMeetingIDs.contains(meeting.id) else { return false }
+            return !(meeting.provider.canDetectJoinState && inZoomCall)
         }
+        logger.notice("evaluateState: \(activeMeetings.count) active meeting(s) \(activeMeetings.map(\.title), privacy: .public), \(toAlert.count) to alert, inZoomCall=\(inZoomCall)")
 
-        guard !dismissedMeetingIDs.contains(active.id) else {
+        guard !toAlert.isEmpty else {
+            dismissAlert()
             return
         }
 
-        // Active meeting, not in a call, not yet dismissed: alert
-        // (re-showing is harmless if already showing — show() no-ops when
-        // a window is already up).
-        let wasAlerting = currentlyAlertingMeetingID == active.id
-        currentlyAlertingMeetingID = active.id
-        alertController.show(meeting: active) { [weak self] in
-            self?.dismissedMeetingIDs.insert(active.id)
+        // Alert on the whole batch together (re-showing is harmless if
+        // already showing — show() no-ops when a window is already up).
+        // Resolving any one of them (join or dismiss-all) dismisses the
+        // rest of the batch too, since you can only be in one meeting.
+        let newIDs = Set(toAlert.map(\.id))
+        let wasAlertingSameSet = currentlyAlertingMeetingIDs == newIDs
+        currentlyAlertingMeetingIDs = newIDs
+        alertController.show(meetings: toAlert) { [weak self] in
+            self?.dismissedMeetingIDs.formUnion(newIDs)
+            self?.currentlyAlertingMeetingIDs = []
             self?.rebuildMenu()
         }
-        if !wasAlerting { rebuildMenu() }
+        if !wasAlertingSameSet { rebuildMenu() }
+    }
+
+    private func dismissAlert() {
+        let wasAlerting = !currentlyAlertingMeetingIDs.isEmpty
+        alertController.dismiss()
+        currentlyAlertingMeetingIDs = []
+        if wasAlerting { rebuildMenu() }
     }
 }

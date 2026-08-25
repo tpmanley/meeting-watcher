@@ -31,7 +31,9 @@ final class AlertWindowController {
             let contentView = AlertContentView(
                 meetings: meetings,
                 onJoin: { [weak self] meeting in
-                    NSWorkspace.shared.open(meeting.joinURL)
+                    if let joinURL = meeting.joinURL {
+                        NSWorkspace.shared.open(joinURL)
+                    }
                     onResolved()
                     self?.dismiss()
                 },

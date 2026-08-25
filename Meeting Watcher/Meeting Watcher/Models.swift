@@ -7,15 +7,23 @@ import Foundation
 enum MeetingProvider: Equatable {
     case zoom
     case knoxMeeting
+    /// Some other join link (Google Meet, Teams, a plain webpage, etc.)
+    /// found in the event that isn't a provider we recognize specifically.
+    case other
+    /// No join link found in the event at all — still surfaced/alerted on,
+    /// just with nothing to open.
+    case none
 
     var canDetectJoinState: Bool {
         self == .zoom
     }
 
-    var joinButtonLabel: String {
+    var joinButtonLabel: String? {
         switch self {
         case .zoom: return "Join Zoom Meeting"
         case .knoxMeeting: return "Join Knox Meeting"
+        case .other: return "Open Meeting Link"
+        case .none: return nil
         }
     }
 }
@@ -25,7 +33,7 @@ struct CalendarMeeting: Identifiable, Equatable {
     let title: String
     let start: Date
     let end: Date
-    let joinURL: URL
+    let joinURL: URL?
     let provider: MeetingProvider
     let isDeclined: Bool
 

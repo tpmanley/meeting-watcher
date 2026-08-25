@@ -16,6 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastCalendarFetch: Date = .distantPast
     private var currentlyAlertingMeetingIDs: Set<String> = []
     private var dismissedMeetingIDs: Set<String> = []
+    private var attendedMeetingIDs: Set<String> = []
     private var lastRenderedPastMeetingIDs: Set<String> = []
     private var calendarErrorMessage: String?
     private var hasAlertedForCurrentCalendarError = false
@@ -95,9 +96,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 } else if hasEnded {
                     title += " (ended)"
                 }
-                let item = menu.addItem(withTitle: title, action: #selector(openMeetingZoomLink(_:)), keyEquivalent: "")
-                item.representedObject = meeting.joinURL
-                item.target = self
+                let item: NSMenuItem
+                if let joinURL = meeting.joinURL {
+                    item = menu.addItem(withTitle: title, action: #selector(openMeetingJoinLink(_:)), keyEquivalent: "")
+                    item.representedObject = joinURL
+                    item.target = self
+                } else {
+                    item = menu.addItem(withTitle: title, action: nil, keyEquivalent: "")
+                    item.isEnabled = false
+                }
                 if meeting.isDeclined || hasEnded {
                     let attributedTitle = NSMutableAttributedString(string: title)
                     attributedTitle.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue,
@@ -123,7 +130,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
-    @objc private func openMeetingZoomLink(_ sender: NSMenuItem) {
+    @objc private func openMeetingJoinLink(_ sender: NSMenuItem) {
         guard let url = sender.representedObject as? URL else { return }
         NSWorkspace.shared.open(url)
     }
@@ -181,10 +188,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         lastCalendarFetch = Date()
-        calendarService.fetchTodaysZoomMeetings { [weak self] result in
+        calendarService.fetchTodaysMeetings { [weak self] result in
             switch result {
             case .success(let meetings):
-                logger.notice("fetchCalendar: \(meetings.count) zoom meeting(s) today: \(meetings.map { "\($0.title) [\($0.start)–\($0.end)]" }, privacy: .public)")
+                logger.notice("fetchCalendar: \(meetings.count) meeting(s) today: \(meetings.map { "\($0.title) [\($0.start)–\($0.end)]" }, privacy: .public)")
                 self?.todaysMeetings = meetings
                 self?.calendarErrorMessage = nil
                 self?.hasAlertedForCurrentCalendarError = false
@@ -244,9 +251,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // join-state detection (e.g. Knox Meeting), which always alerts
         // until dismissed.
         let inZoomCall = ZoomProcessMonitor.isInMeeting()
-        let toAlert = activeMeetings.filter { meeting in
-            guard !dismissedMeetingIDs.contains(meeting.id) else { return false }
-            return !(meeting.provider.canDetectJoinState && inZoomCall)
+        var toAlert: [CalendarMeeting] = []
+        for meeting in activeMeetings {
+            guard !dismissedMeetingIDs.contains(meeting.id) else { continue }
+            guard meeting.provider.canDetectJoinState else {
+                toAlert.append(meeting)
+                continue
+            }
+            if inZoomCall {
+                // Remember that we stood this one down because a Zoom call
+                // was active, so leaving that call early doesn't cause a
+                // re-alert below — the call ending isn't "never joined."
+                attendedMeetingIDs.insert(meeting.id)
+            } else if attendedMeetingIDs.remove(meeting.id) != nil {
+                // Was in a Zoom call for this meeting and the call just
+                // ended (e.g. left early) — treat it as already handled
+                // rather than prompting to join a meeting we just left.
+                dismissedMeetingIDs.insert(meeting.id)
+            } else {
+                toAlert.append(meeting)
+            }
         }
         logger.notice("evaluateState: \(activeMeetings.count) active meeting(s) \(activeMeetings.map(\.title), privacy: .public), \(toAlert.count) to alert, inZoomCall=\(inZoomCall)")
 

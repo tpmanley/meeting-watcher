@@ -67,16 +67,18 @@ private struct MeetingChoiceView: View {
                 .font(.system(size: compact ? 16 : 20))
                 .foregroundColor(.white.opacity(0.7))
 
-            Button(action: onJoin) {
-                Text(meeting.provider.joinButtonLabel)
-                    .font(.system(size: compact ? 18 : 20, weight: .semibold))
-                    .padding(.horizontal, compact ? 28 : 32)
-                    .padding(.vertical, compact ? 14 : 16)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            if let joinButtonLabel = meeting.provider.joinButtonLabel {
+                Button(action: onJoin) {
+                    Text(joinButtonLabel)
+                        .font(.system(size: compact ? 18 : 20, weight: .semibold))
+                        .padding(.horizontal, compact ? 28 : 32)
+                        .padding(.vertical, compact ? 14 : 16)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 }

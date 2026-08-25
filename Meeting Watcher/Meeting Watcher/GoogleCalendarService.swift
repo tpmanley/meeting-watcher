@@ -6,8 +6,10 @@ import os
 private let logger = Logger(subsystem: "com.tommanley.meetingwatcher", category: "GoogleCalendarService")
 
 /// Handles Google OAuth (installed-app flow via ASWebAuthenticationSession)
-/// and pulls today's calendar events, extracting any that contain a
-/// zoom.us link in the location, description, or hangoutLink field.
+/// and pulls all of today's calendar events, extracting a join link (Zoom,
+/// Knox Meeting, or any other URL found in the location/description/
+/// hangoutLink/conference fields) from each when one exists. Events with no
+/// join link at all are still returned, just with `joinURL == nil`.
 final class GoogleCalendarService: NSObject {
 
     // MARK: - Google Cloud Console OAuth client
@@ -95,8 +97,9 @@ final class GoogleCalendarService: NSObject {
         KeychainHelper.loadRefreshToken() != nil
     }
 
-    /// Returns any meetings today whose event body contains a zoom.us link.
-    func fetchTodaysZoomMeetings(completion rawCompletion: @escaping (Result<[CalendarMeeting], Error>) -> Void) {
+    /// Returns all of today's meetings, each with a join link when one
+    /// could be found in the event body.
+    func fetchTodaysMeetings(completion rawCompletion: @escaping (Result<[CalendarMeeting], Error>) -> Void) {
         let completion: (Result<[CalendarMeeting], Error>) -> Void = { result in
             DispatchQueue.main.async { rawCompletion(result) }
         }
@@ -251,7 +254,7 @@ final class GoogleCalendarService: NSObject {
                     .compactMap { $0 }
                     .joined(separator: " ")
 
-                let joinURL: URL
+                let joinURL: URL?
                 let provider: MeetingProvider
                 if let zoomURL = Self.extractZoomURL(from: searchText) {
                     joinURL = zoomURL
@@ -259,14 +262,17 @@ final class GoogleCalendarService: NSObject {
                 } else if let knoxURL = Self.extractKnoxMeetingURL(from: searchText) {
                     joinURL = knoxURL
                     provider = .knoxMeeting
+                } else if let genericURL = Self.extractGenericURL(from: searchText) {
+                    joinURL = genericURL
+                    provider = .other
                 } else {
-                    logger.notice("skip '\(title, privacy: .public)': no zoom.us/j/ or meeting.samsung.net link found. Searched text: \(searchText.isEmpty ? "<empty>" : searchText, privacy: .public)")
-                    return nil
+                    joinURL = nil
+                    provider = .none
                 }
 
                 let isDeclined = event.attendees?.first(where: { $0.isSelf == true })?.responseStatus == "declined"
 
-                logger.notice("match '\(title, privacy: .public)': \(start)–\(end), provider=\(String(describing: provider), privacy: .public), joinURL=\(joinURL.absoluteString, privacy: .public), declined=\(isDeclined)")
+                logger.notice("match '\(title, privacy: .public)': \(start)–\(end), provider=\(String(describing: provider), privacy: .public), joinURL=\(joinURL?.absoluteString ?? "none", privacy: .public), declined=\(isDeclined)")
 
                 return CalendarMeeting(
                     id: event.id,
@@ -310,6 +316,20 @@ final class GoogleCalendarService: NSObject {
     static func extractKnoxMeetingURL(from text: String) -> URL? {
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
         guard let match = knoxMeetingLinkRegex.firstMatch(in: text, range: range),
+              let swiftRange = Range(match.range, in: text) else { return nil }
+        return URL(string: String(Self.trimmingTrailingPunctuation(text[swiftRange])))
+    }
+
+    /// Fallback for any other join link (Google Meet, Teams, WebEx, a plain
+    /// webpage, ...) once the zoom.us/Knox regexes above have both missed —
+    /// just the first http(s) URL found anywhere in the searched text.
+    private static let genericURLRegex = try! NSRegularExpression(
+        pattern: #"https?://[^\s<>"']+"#
+    )
+
+    static func extractGenericURL(from text: String) -> URL? {
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard let match = genericURLRegex.firstMatch(in: text, range: range),
               let swiftRange = Range(match.range, in: text) else { return nil }
         return URL(string: String(Self.trimmingTrailingPunctuation(text[swiftRange])))
     }

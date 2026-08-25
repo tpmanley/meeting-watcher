@@ -5,10 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A macOS menu-bar app ("Meeting Watcher"). It polls the signed-in user's Google Calendar for
-today's events, extracts any that contain a `zoom.us/j/...` or `meeting.samsung.net` (Knox
-Meeting) link, and — if one is currently active and the user isn't already on the call — throws
-up a full-screen "join now" overlay on every display. No Dock icon (`NSApplication.Accessory`
-activation policy + `LSUIElement`).
+today's events and — for any that's currently active and the user isn't already on the call —
+throws up a full-screen "join now" overlay on every display. This applies to every meeting, not
+just recognized providers: a `zoom.us/j/...` or `meeting.samsung.net` (Knox Meeting) link gets a
+labeled join button and (for Zoom) call-state detection; any other link gets a generic "Open
+Meeting Link" button; a meeting with no link at all still alerts, just with no button. No Dock
+icon (`NSApplication.Accessory` activation policy + `LSUIElement`).
 
 The Xcode project lives at `Meeting Watcher/Meeting Watcher.xcodeproj`; source is under
 `Meeting Watcher/Meeting Watcher/`. This directory is not a git repository.
@@ -59,7 +61,7 @@ Everything is wired together imperatively in `AppDelegate.swift`, which owns two
 one `Timer` (started in `startPolling()`):
 
 - Every 5 minutes (or on manual "Check Now"): re-fetch today's calendar via
-  `GoogleCalendarService.fetchTodaysZoomMeetings`, cache the result in `todaysMeetings`, rebuild
+  `GoogleCalendarService.fetchTodaysMeetings`, cache the result in `todaysMeetings`, rebuild
   the status-bar menu.
 - Every 20 seconds: `evaluateState()` decides whether to show or dismiss the full-screen alert,
   based on the cached meetings plus a live process check.
@@ -85,19 +87,22 @@ configuration reference" error rather than producing a broken build silently.
 Each raw `GCalEvent` is filtered/transformed into a `CalendarMeeting` in `fetchEvents`'s
 `compactMap`:
 - Skipped if `status == "cancelled"`, has no `dateTime` (all-day events), or its date strings
-  fail to parse.
+  fail to parse. Every other event is kept — including ones with no join link at all.
 - The join link is pulled out of `location` / `description` / `hangoutLink` / conference
   `entryPoints` (all concatenated into one `searchText`, since which field holds it depends on how
-  the invite was created) by trying `extractZoomURL` first, then `extractKnoxMeetingURL`. Whichever
-  matches sets both `joinURL` and `provider` (`MeetingProvider.zoom` / `.knoxMeeting`, in
-  `Models.swift`). A meeting with neither link is skipped entirely.
+  the invite was created) by trying `extractZoomURL`, then `extractKnoxMeetingURL`, then
+  `extractGenericURL` (first `http(s)://` link found, for anything unrecognized — Meet, Teams,
+  a plain webpage). Whichever matches sets both `joinURL` and `provider`
+  (`MeetingProvider.zoom` / `.knoxMeeting` / `.other`, in `Models.swift`). If none match, `joinURL`
+  is `nil` and `provider` is `.none`.
 - `isDeclined` is derived from the event's `attendees` array by finding the entry where
   `isSelf == true` and checking `responseStatus == "declined"`.
 
-Adding a new "what counts as a meeting we care about" provider means: a new regex + extractor
-function here, a new `MeetingProvider` case in `Models.swift` (with `canDetectJoinState` and
-`joinButtonLabel` filled in), and a branch in the `if let ... else if let ...` chain above — not
-changes in `AppDelegate`.
+Adding a new "what counts as a meeting we care about" provider (i.e. one that gets a specific
+join-button label and/or call-state detection, rather than falling through to `.other`/`.none`)
+means: a new regex + extractor function here, a new `MeetingProvider` case in `Models.swift`
+(with `canDetectJoinState` and `joinButtonLabel` filled in), and a branch in the
+`if let ... else if let ...` chain above — not changes in `AppDelegate`.
 
 ### AppDelegate.swift — state machine
 
@@ -107,8 +112,8 @@ changes in `AppDelegate`.
 2. If `active.provider.canDetectJoinState` is true (currently just Zoom) and
    `ZoomProcessMonitor.isInMeeting()` is true, assume the user is in *that* meeting and stand down
    (note: it can't tell *which* call the user is in, just that one is active — see README "Known
-   limitations"). Providers with no detection (Knox Meeting) skip this check entirely and always
-   proceed to alert.
+   limitations"). Providers with no detection (Knox Meeting, `.other`, and `.none` — i.e. anything
+   that isn't Zoom) skip this check entirely and always proceed to alert.
 3. If the meeting's ID is in `dismissedMeetingIDs`, don't re-alert for it this occurrence.
 4. Otherwise show the alert and mark it as `currentlyAlertingMeetingID`; the dismiss callback adds
    the ID to `dismissedMeetingIDs` and triggers a menu rebuild.

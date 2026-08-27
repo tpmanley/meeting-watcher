@@ -67,6 +67,12 @@ private struct MeetingChoiceView: View {
                 .font(.system(size: compact ? 16 : 20))
                 .foregroundColor(.white.opacity(0.7))
 
+            if let room = meeting.room {
+                Text(room)
+                    .font(.system(size: compact ? 16 : 20))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+
             if let joinButtonLabel = meeting.provider.joinButtonLabel {
                 Button(action: onJoin) {
                     Text(joinButtonLabel)

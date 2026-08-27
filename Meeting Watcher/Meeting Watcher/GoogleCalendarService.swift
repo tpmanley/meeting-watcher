@@ -271,8 +271,9 @@ final class GoogleCalendarService: NSObject {
                 }
 
                 let isDeclined = event.attendees?.first(where: { $0.isSelf == true })?.responseStatus == "declined"
+                let room = Self.extractRoom(from: event.location)
 
-                logger.notice("match '\(title, privacy: .public)': \(start)–\(end), provider=\(String(describing: provider), privacy: .public), joinURL=\(joinURL?.absoluteString ?? "none", privacy: .public), declined=\(isDeclined)")
+                logger.notice("match '\(title, privacy: .public)': \(start)–\(end), provider=\(String(describing: provider), privacy: .public), joinURL=\(joinURL?.absoluteString ?? "none", privacy: .public), room=\(room ?? "none", privacy: .public), declined=\(isDeclined)")
 
                 return CalendarMeeting(
                     id: event.id,
@@ -281,7 +282,8 @@ final class GoogleCalendarService: NSObject {
                     end: end,
                     joinURL: joinURL,
                     provider: provider,
-                    isDeclined: isDeclined
+                    isDeclined: isDeclined,
+                    room: room
                 )
             }
 
@@ -332,6 +334,20 @@ final class GoogleCalendarService: NSObject {
         guard let match = genericURLRegex.firstMatch(in: text, range: range),
               let swiftRange = Range(match.range, in: text) else { return nil }
         return URL(string: String(Self.trimmingTrailingPunctuation(text[swiftRange])))
+    }
+
+    /// The Calendar API's `location` field is free text set by whoever
+    /// created the event — often a physical room ("Room 12A", a building/desk
+    /// name), but sometimes a join link instead (some invite flows put the
+    /// video link there rather than in `description`/`hangoutLink`). We only
+    /// treat it as a room when it doesn't contain a URL, since we have no
+    /// reliable way to separate a room name from a link sharing the same
+    /// field (e.g. "Room 12A / https://zoom.us/j/123").
+    static func extractRoom(from location: String?) -> String? {
+        guard let location else { return nil }
+        let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains("http://"), !trimmed.contains("https://") else { return nil }
+        return trimmed
     }
 
     /// Strips sentence punctuation (e.g. a trailing "." or ")") that the

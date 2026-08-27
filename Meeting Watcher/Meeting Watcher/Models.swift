@@ -36,6 +36,9 @@ struct CalendarMeeting: Identifiable, Equatable {
     let joinURL: URL?
     let provider: MeetingProvider
     let isDeclined: Bool
+    /// The event's `location`, when it looks like a physical room rather
+    /// than a join link — see `GoogleCalendarService.extractRoom`.
+    let room: String?
 
     /// True if "now" falls within [start, end], with a small grace window
     /// so we still alert if the meeting started a minute ago.

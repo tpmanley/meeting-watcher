@@ -3,13 +3,13 @@
     <channel>
         <title>Meeting Watcher</title>
         <item>
-            <title>1.7</title>
-            <pubDate>Wed, 02 Sep 2026 10:47:26 -0500</pubDate>
-            <sparkle:version>1.7</sparkle:version>
-            <sparkle:shortVersionString>1.7</sparkle:shortVersionString>
+            <title>1.8</title>
+            <pubDate>Wed, 02 Sep 2026 12:54:49 -0500</pubDate>
+            <sparkle:version>1.8</sparkle:version>
+            <sparkle:shortVersionString>1.8</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.4</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/tpmanley/meeting-watcher/releases/download/v1.7/Meeting-Watcher-1.7.zip" length="1206655" type="application/octet-stream" sparkle:edSignature="CT2av1e8epPptoRKJ1r+M+zdI16lrMH+wh14L58M3+NdCBwnkRIG7KF4y5m9mPePC5RdCRRA77hJl3b1JoQMAw=="/>
+            <enclosure url="https://github.com/tpmanley/meeting-watcher/releases/download/v1.8/Meeting-Watcher-1.8.zip" length="1211223" type="application/octet-stream" sparkle:edSignature="QmSpC0aK491ngkS8gadqR1QW3ExKviCtq3ISdTKaVpai5KMykpJXZaDpe942FJvllFmMGNLI8hhfGa3W35JkDg=="/>
         </item>
     </channel>
 </rss>

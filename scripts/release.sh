@@ -88,8 +88,13 @@ echo "    current version: $CURRENT_VERSION -> $VERSION"
 DEV_ID_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | grep -m1 "Developer ID Application" || true)"
 
 echo
-echo "==> Bumping MARKETING_VERSION to $VERSION"
+echo "==> Bumping MARKETING_VERSION and CURRENT_PROJECT_VERSION to $VERSION"
+# CURRENT_PROJECT_VERSION (CFBundleVersion) is what Sparkle actually compares
+# to detect a newer update — it must advance every release, not just the
+# human-readable MARKETING_VERSION string, or Sparkle can't tell releases
+# apart. Keeping the two in lockstep avoids needing a separate counter.
 sed -i '' "s/MARKETING_VERSION = $CURRENT_VERSION;/MARKETING_VERSION = $VERSION;/g" "$PBXPROJ"
+sed -i '' "s/CURRENT_PROJECT_VERSION = $CURRENT_VERSION;/CURRENT_PROJECT_VERSION = $VERSION;/g" "$PBXPROJ"
 if git diff --quiet -- "$PBXPROJ"; then
   echo "error: sed didn't change $PBXPROJ — MARKETING_VERSION format may have changed, check it by hand" >&2
   exit 1
@@ -142,6 +147,12 @@ else
   pause "gh CLI not found. Manually create a GitHub Release for $TAG and upload
 $ZIP_PATH as a release asset (see HOMEBREW.md 'Cutting a release')."
 fi
+
+echo
+echo "==> Generating appcast.xml for Sparkle"
+./scripts/generate-appcast.sh "$VERSION"
+git add appcast.xml
+git commit -m "Update appcast.xml for $VERSION" --quiet
 
 echo
 echo "==> Updating Homebrew cask"

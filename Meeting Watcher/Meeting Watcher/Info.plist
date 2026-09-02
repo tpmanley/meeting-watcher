@@ -24,6 +24,12 @@
 	<true/>
 	<key>GoogleClientID</key>
 	<string>$(GOOGLE_CLIENT_ID)</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/tpmanley/meeting-watcher/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>QrmihwMIMrF/S2paBhsTIrarQG0Y2iSSqMc91Oo7ckQ=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

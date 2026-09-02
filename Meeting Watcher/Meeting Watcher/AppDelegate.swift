@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import Sparkle
 import os
 
 private let logger = Logger(subsystem: "com.tommanley.meetingwatcher", category: "AppDelegate")
@@ -10,6 +11,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var launchAtLoginItem: NSMenuItem!
     private let calendarService = GoogleCalendarService()
     private let alertController = AlertWindowController()
+    private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     private var pollTimer: Timer?
 
     private var todaysMeetings: [CalendarMeeting] = []
@@ -123,6 +125,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         launchAtLoginItem = menu.addItem(withTitle: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
         launchAtLoginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        let checkForUpdatesItem = menu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
+        checkForUpdatesItem.target = updaterController
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit", action: #selector(quit), keyEquivalent: "q")
         menu.addItem(.separator())

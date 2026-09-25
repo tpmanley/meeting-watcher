@@ -21,6 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var attendedMeetingIDs: Set<String> = []
     private var lastRenderedPastMeetingIDs: Set<String> = []
     private var calendarErrorMessage: String?
+    private var isFetchingCalendar = false
 
     static func main() {
         let app = NSApplication.shared
@@ -193,8 +194,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             logger.notice("fetchCalendar skipped: not signed in")
             return
         }
+        // Guards against the error-state 60s retry overlapping a still-in-flight
+        // request (whose completion could otherwise land after, and overwrite the
+        // result of, a subsequent fetch).
+        guard !isFetchingCalendar else {
+            logger.notice("fetchCalendar skipped: already in flight")
+            return
+        }
+        isFetchingCalendar = true
         lastCalendarFetch = Date()
         calendarService.fetchTodaysMeetings { [weak self] result in
+            self?.isFetchingCalendar = false
             switch result {
             case .success(let meetings):
                 logger.notice("fetchCalendar: \(meetings.count) meeting(s) today: \(meetings.map { "\($0.title) [\($0.start)–\($0.end)]" }, privacy: .public)")

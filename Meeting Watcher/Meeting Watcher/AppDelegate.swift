@@ -21,7 +21,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var attendedMeetingIDs: Set<String> = []
     private var lastRenderedPastMeetingIDs: Set<String> = []
     private var calendarErrorMessage: String?
-    private var hasAlertedForCurrentCalendarError = false
 
     static func main() {
         let app = NSApplication.shared
@@ -174,12 +173,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startPolling() {
-        // Refresh calendar data every 5 minutes; check meeting/call state every 20s.
+        // Refresh calendar data every 5 minutes (every minute while the last
+        // fetch failed, so the error icon clears soon after the connection
+        // recovers); check meeting/call state every 20s.
         fetchCalendar()
 
         pollTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in
             guard let self else { return }
-            if Date().timeIntervalSince(self.lastCalendarFetch) > 300 {
+            let refreshInterval: TimeInterval = self.calendarErrorMessage != nil ? 60 : 300
+            if Date().timeIntervalSince(self.lastCalendarFetch) > refreshInterval {
                 self.fetchCalendar()
             }
             self.evaluateState()
@@ -198,35 +200,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 logger.notice("fetchCalendar: \(meetings.count) meeting(s) today: \(meetings.map { "\($0.title) [\($0.start)–\($0.end)]" }, privacy: .public)")
                 self?.todaysMeetings = meetings
                 self?.calendarErrorMessage = nil
-                self?.hasAlertedForCurrentCalendarError = false
             case .failure(let error):
                 let message = error.localizedDescription
                 logger.error("Calendar fetch failed: \(message, privacy: .public)")
                 self?.calendarErrorMessage = message
-                self?.presentCalendarErrorAlertIfNeeded(message)
             }
             self?.rebuildMenu()
-        }
-    }
-
-    /// Pops a modal alert the moment the calendar stops being reachable,
-    /// so the failure isn't just sitting silently in the logs. Only fires
-    /// once per outage — it resets when a fetch succeeds again — so a
-    /// persistent error (e.g. every 5-minute retry) doesn't spam dialogs.
-    private func presentCalendarErrorAlertIfNeeded(_ message: String) {
-        guard !hasAlertedForCurrentCalendarError else { return }
-        hasAlertedForCurrentCalendarError = true
-
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Can't reach Google Calendar"
-        alert.informativeText = "\(message)\n\nMeetings won't be detected until this is fixed."
-        alert.addButton(withTitle: "Reconnect Google Calendar")
-        alert.addButton(withTitle: "OK")
-
-        NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn {
-            connectCalendar()
         }
     }
 

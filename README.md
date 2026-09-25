@@ -159,8 +159,10 @@ What to look for:
   whether it thinks you're already in a call.
 - `Calendar fetch failed: ...` — the calendar couldn't be reached at
   all (expired/revoked OAuth token, network error, etc). This also
-  triggers a warning icon in the menu bar and a popup with the same
-  message.
+  switches the menu bar icon to a warning triangle (with the message in
+  the menu). While it's in that state the app retries every minute
+  instead of every 5, and the normal icon comes back as soon as a fetch
+  succeeds.
 
 The menu itself (click the menu bar icon) also lists today's detected
 meetings and the last time the calendar was checked, so you don't

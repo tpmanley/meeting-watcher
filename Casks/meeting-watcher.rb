@@ -7,8 +7,10 @@ cask "meeting-watcher" do
   # and its sha256.
   url "https://github.com/tpmanley/meeting-watcher/releases/download/v#{version}/Meeting-Watcher-#{version}.zip"
   name "Meeting Watcher"
-  desc "Menu bar alert when a calendar Zoom/Knox Meeting call is live and you haven't joined"
+  desc "Menu bar alert when a calendar meeting is live and you haven't joined"
   homepage "https://github.com/tpmanley/meeting-watcher"
+
+  depends_on :macos
 
   app "Meeting Watcher.app"
 
@@ -16,15 +18,14 @@ cask "meeting-watcher" do
   # come through Gatekeeper quarantined. This is the same thing a coworker
   # would otherwise do by hand via System Settings > Privacy & Security >
   # "Open Anyway". Safe here because we control the build in build-release.sh.
-  postflight do
-    system_command "/usr/bin/xattr",
-                    args: ["-d", "com.apple.quarantine", "#{appdir}/Meeting Watcher.app"],
-                    sudo: false
+  postflight_steps do
+    run "/usr/bin/xattr",
+        args: ["-d", "com.apple.quarantine", "{{appdir}}/Meeting Watcher.app"]
   end
 
   zap trash: [
-    "~/Library/Preferences/com.tommanley.Meeting-Watcher.plist",
     "~/Library/Caches/com.tommanley.Meeting-Watcher",
+    "~/Library/Preferences/com.tommanley.Meeting-Watcher.plist",
     "~/Library/Saved Application State/com.tommanley.Meeting-Watcher.savedState",
   ]
 

@@ -19,8 +19,14 @@ if [ -z "$VERSION" ]; then
 fi
 
 echo "==> Building $APP_NAME $VERSION (Release)"
+# Build ad-hoc signed: the app gets re-signed below (Developer ID or ad-hoc)
+# regardless, so Xcode's own signing is throwaway — and leaving it on
+# Automatic requires a "Mac Development" cert for the project's team on
+# whatever machine is cutting the release.
 xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
-  -derivedDataPath "$BUILD_DIR" clean build
+  -derivedDataPath "$BUILD_DIR" \
+  CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+  clean build
 
 APP_PATH="$BUILD_DIR/Build/Products/Release/$APP_NAME.app"
 if [ ! -d "$APP_PATH" ]; then
